@@ -5,10 +5,10 @@ ALT 1..N 	window
 STRG 1..N 	focus group 
 STG SHIFT p	Command palette => type cloj to get to clojure repl
 Eval in Repl (will only work from clj file)
-	STRG , + l lines
-	STRG , + f file
-	STRG , + s selection
-	STRG , + b block
+	STRG SHIFT , + l lines
+	STRG SHIFT, + f file
+	STRG SHIFT, + s selection
+	STRG SHIFT, + b block
 
 Fuzzy Search stuff
 STRG i incremental search
