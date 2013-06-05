@@ -1,81 +1,83 @@
 (ns midje-demo.parse-tria-results
-	(:use hiccup.core)
-	(:require [clojure-csv.core :as csv])
-	(:require [clojure.string :as str])
-	(:require [clojure.java.io :as io]))
+  (:import [java.io FileNotFoundException])
+  (:use hiccup.core)
+  (:require [clojure-csv.core :as csv])
+  (:require [clojure.string :as str])
+  (:require [clojure.java.io :as io]))
 
 (defn map-tag [tag xs]
   (map (fn [x] [tag x]) xs))
 
-(defn out [vec]
-	(def counter (atom 0))
-	(html [:table
-	    [:tr (map-tag :th ["Platzierung" "Name" "Verein" "Jahrgang" "Gesamtzeit"])]
-		
-		    (for [[platz name verein jg ziel-zeit] vec]
-			[:tr 
-				[:td (swap! counter inc)] 
-				[:td name]
-				[:td verein]
-				[:td jg]
-				[:td ziel-zeit]])]))
 
-(defn grabData [file]   
+
+(defn out [sq]
+  (def counter (atom 0))
+
+  (html [:table [:tr (map-tag :th ["Platzierung" "Name" "Verein" "Jahrgang" "Gesamtzeit"])]
+         (map
+           (fn [m]
+             (prn m)
+              [:tr [:td (swap! counter inc)]
+               [:td (m :name )]
+               [:td (m :verein )]
+               [:td (m :jg )]
+               [:td (m :ziel-zeit )]]
+              )
+           sq)]))
+(defn grabData [file]
   (str/split-lines (slurp file)))
 
 (defn csv-seq-path [file]
-	(map (fn [x]  (first(csv/parse-csv x))) (grabData file) ))
+  (map (fn [x] (first (csv/parse-csv x))) (grabData file)))
 
-(defn grabDataFromFile [file process-fn]   
+(defn grabDataFromFile [file process-fn]
   (with-open [rdr (clojure.java.io/reader file)]
-  	(doseq [line (line-seq rdr)] 
+    (doseq [line (line-seq rdr)]
       (process-fn line))))
 
 (defn csv-seq [fname]
-				(csv-seq-path (str "/home/mrbig/workspace/notes/clojure/midje-demo/" fname)))
+  (csv-seq-path (str "" fname)))
 
 (defn map-flds [lsq]
-	(filter 
-		(fn [v] (not(empty? (nth v 4))))
-	(map 
-		#(vector (nth % 8) (nth % 2) (nth % 5) (nth % 3) (nth % 9))
-		 lsq)))
+  ;;(filter #(not (empty? (:ziel-zeit %)))
+  (map #(zipmap [:platz,:startnummer,:name,:jg,:nat,:verein,:ak,:akp,:mw-platz,:ziel-zeit ] %) lsq)) ;;)
 
-(defn to-result-table [lsq]
-	(out(map-flds (rest lsq)))
-	)
+(defn agegroup-pred [yrs m] (contains? yrs (m :jg )))
 
-(defn in? 
+(defn to-result-table
+  ([lsq] (out (map-flds (rest lsq))))
+  ([lsq pred] (out (filter pred (map-flds (rest lsq))))))
+
+(defn in?
   "true if seq contains elm"
-  [seq elm]  
+  [seq elm]
   (prn seq elm)
   (some #(= elm %) seq))
 
 (defn second-line-last-col [seq]
-	(last(second seq)))
+  (last (second seq)))
+
+(defn result-file [age-group gender]
+  (let [f (clojure.java.io/file (str "Ergebnisliste-Kiezkindertriathlon 2013 " gender " " age-group " s.csv"))]
+    (if (.exists f)
+      f
+      (throw (FileNotFoundException. (.getAbsolutePath f))))))
+
+(def age-to-gender {"c" ["m" "w"]
+                    "b" ["m" "w"]
+                    "a" ["x"]
+                    "j" ["x"]})
+
+(defn swim-times [age-group]
+  (map
+    #(second-line-last-col (csv-seq-path (result-file age-group %)))
+    (age-to-gender age-group)))
 
 (defn first-str [times]
-	(first (sort times)))
-
-(defn male-female-swim-times [age-group]
-	(vector
-		(second-line-last-col 
-			(csv-seq-path (str "file:///home/mrbig/workspace/notes/clojure/midje-demo/Ergebnisliste-Kiezkindertriathlon%202013%20m%20" age-group "%20s.csv")))
-		(second-line-last-col 
-			(csv-seq-path (str "file:///home/mrbig/workspace/notes/clojure/midje-demo/Ergebnisliste-Kiezkindertriathlon%202013%20w%20" age-group "%20s.csv")))))
+  (first (sort times)))
 
 (defn min-swim-time [age-group]
-	(first-str(male-female-swim-times age-group)))
-(defn min-swim-time-x [age-group](second-line-last-col 
-			(csv-seq-path (str "file:///home/mrbig/workspace/notes/clojure/midje-demo/Ergebnisliste-Kiezkindertriathlon%202013%20x%20" age-group "%20s.csv"))))
-
-(defn to-result-table-as [lsq yrs]
-	(out (filter  #(in? yrs (nth % 3)) (map-flds (rest lsq)))))
-
-(defn to-result-tablex [lsq]
-	(out (filter 
-		(fn [v] (not(empty? (nth v 4))))
-		(map #(vector (nth % 8) (nth % 2) (nth % 5) (nth % 3) (nth % 9))lsq))))
+  (first-str (swim-times age-group)))
 
 
-;;(grabDataFromFile "/home/mrbig/workspace/notes/clojure/midje-demo/in-file.csv" prn)
+
