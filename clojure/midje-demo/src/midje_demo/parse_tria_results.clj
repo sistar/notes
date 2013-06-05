@@ -3,12 +3,14 @@
   (:use hiccup.core)
   (:require [clojure-csv.core :as csv])
   (:require [clojure.string :as str])
-  (:require [clojure.java.io :as io]))
+  (:require [clojure.java.io :as io])
+  (:require [clj-http.client :as client]))
 
 (defn map-tag [tag xs]
   (map (fn [x] [tag x]) xs))
 
-
+(defn call-verein-service [startnummer]
+  (:verein (:body(client/get (str "http://localhost:8000/collection" "/" startnummer) {:accept :json :as :json}))))
 
 (defn out [sq]
   (def counter (atom 0))
@@ -16,14 +18,14 @@
   (html [:table [:tr (map-tag :th ["Platzierung" "Name" "Verein" "Jahrgang" "Gesamtzeit"])]
          (map
            (fn [m]
-             (prn m)
               [:tr [:td (swap! counter inc)]
                [:td (m :name )]
-               [:td (m :verein )]
+               [:td (call-verein-service (m :startnummer ))]
                [:td (m :jg )]
                [:td (m :ziel-zeit )]]
               )
            sq)]))
+
 (defn grabData [file]
   (str/split-lines (slurp file)))
 
@@ -78,6 +80,3 @@
 
 (defn min-swim-time [age-group]
   (first-str (swim-times age-group)))
-
-
-
