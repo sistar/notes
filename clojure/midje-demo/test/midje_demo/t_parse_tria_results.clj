@@ -92,5 +92,5 @@
     (let [mst (min-swim-time "c")
           time-modifier (partial add-fastest-swimtime-in-group mst)
           lsq (csv-seq "in-file-w-c.csv")]
-      (:ziel-zeit (first (map time-modifier (map-flds (rest lsq)))))
+      (:gesamt-zeit (first (map time-modifier (map-flds (rest lsq)))))
       => "0:10:38")))

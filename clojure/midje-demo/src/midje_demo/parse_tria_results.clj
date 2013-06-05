@@ -29,7 +29,7 @@
 
 (defn map-flds [lsq]
   ;;(filter #(not (empty? (:ziel-zeit %)))
-  (map #(zipmap [:platz,:startnummer,:name,:jg,:nat,:verein,:ak,:akp,:mw-platz,:ziel-zeit ] %) lsq)) ;;)
+  (map #(zipmap [:platz,:startnummer,:name,:jg,:nat,:verein,:ak,:akp,:mw-platz,:rad-laufen-zeit ] %) lsq)) ;;)
 
 (defn agegroup-pred [yrs m] (contains? yrs (m :jg )))
 
@@ -66,7 +66,7 @@
   (apply merge (filter #(not (empty? (first (vals %)))) (map #(hash-map (second %) (last %)) (swim-times))))
   )
 (defn rad-laufen-zeit [startnummer]
-
+  ;;persoenliche zeit minus schnellste schwimmzeit
   )
 (defn out [sq]
   (def counter (atom 0))
@@ -79,14 +79,14 @@
               [:td (call-verein-service (m :startnummer ))]
               [:td (m :jg )]
               [:td ((startnummer-to-swimtimes) (m :startnummer ))]
-              [:td (rad-laufen-zeit (m :startnummer ))]
-              [:td (m :ziel-zeit )]]
+              [:td (m :rad-laufen-zeit-korrigiert )]
+              [:td (m :gesamt-zeit )]]
              )
            sq)]))
 
 (defn to-result-table
   ([lsq time-modifier] (out (map time-modifier (map-flds (rest lsq)))))
-  ([lsq pred time-modifier] (out (map time-modifier(filter pred (map-flds (rest lsq)))))))
+  ([lsq pred time-modifier] (out (map time-modifier (filter pred (map-flds (rest lsq)))))))
 
 (defn best-swim-times
   ([age-group gender]
@@ -94,7 +94,7 @@
   ([age-group]
     (map
       #(best-swim-times age-group %)
-    (age-to-gender age-group))))
+      (age-to-gender age-group))))
 
 (defn first-str [times]
   (first (sort times)))
@@ -121,8 +121,30 @@
             ]
         (format "%d:%02d:%02d" correct-h correct-m correct-s)))))
 
+(defn sub-timestr [a b]
+  (if (or (empty? a) (empty? b))
+    nil
+    (let [[h m s] (map - (map parse-int (.split a ":")) (map parse-int (.split b ":")))]
+      (prn h m s)
+      (let [carry-s-to-m (if (< s 0) true false)
+            correct-s (if carry-s-to-m (+ 60 s)s)
+            carried-m (if carry-s-to-m (dec m) m)
+            carry-m-to-h (if (< carried-m 0)  true false)
+            correct-m (if carry-m-to-h (+ 60 carried-m)carried-m)
+            correct-h (if carry-m-to-h (dec h) h)
+            ]
+        (format "%d:%02d:%02d" correct-h correct-m correct-s)))))
+
+
+;;ziel-zeit wird aus Ergebnisliste genommen
 (defn add-fastest-swimtime-in-group [fastest-time-to-add-timestr m]
-  (assoc m :ziel-zeit (add-timestr fastest-time-to-add-timestr (m :ziel-zeit))))
+  (let [gesamt-zeit (add-timestr fastest-time-to-add-timestr (m :rad-laufen-zeit ))
+        schwimmzeit ((startnummer-to-swimtimes) (m :startnummer ))
+        rad-laufen-zeit-korrigiert (sub-timestr gesamt-zeit schwimmzeit)]
+    (prn rad-laufen-zeit-korrigiert gesamt-zeit schwimmzeit)
+    (assoc m :gesamt-zeit gesamt-zeit
+      :rad-laufen-zeit-korrigiert rad-laufen-zeit-korrigiert)
+    ))
 
 (def infile-keys {"c" "c",
                   "b" "b",
