@@ -49,7 +49,7 @@
     (let [s-a-pred (partial agegroup-pred ["2000" "2001"])
           j-b-pred (partial agegroup-pred ["1998" "1999"])
           mst-a (min-swim-time "a")
-          mst-j (min-swim-time "j")
+          mst-j (min-swim-time "sb")
           time-modifier-a (partial add-fastest-swimtime-in-group mst-a)
           time-modifier-j (partial add-fastest-swimtime-in-group mst-j)
           ]
@@ -87,7 +87,7 @@
     (min-swim-time "c") => "0:02:28"
     (min-swim-time "b") => "0:03:24"
     (min-swim-time "a") => "0:05:56"
-    (min-swim-time "j") => "0:07:25"
+    (min-swim-time "sb") => "0:07:25"
     )
   (fact "it adds min-swim-time to total-time"
     (let [mst (min-swim-time "c")

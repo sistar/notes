@@ -2,7 +2,6 @@
 	(:use midje.sweet)
 	(:use midje-demo.tria-results))
 (facts "about mainfile"
-	;;(fact "it processes all data"
-		;;(-main)=> nil
-;;		)
-)
+	(fact "it processes all data"
+		(-main)=> nil
+		))

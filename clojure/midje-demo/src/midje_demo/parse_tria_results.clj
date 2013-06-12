@@ -10,9 +10,11 @@
 (defn map-tag [tag xs]
   (map (fn [x] [tag x]) xs))
 
-(defn call-verein-service [startnummer]
+(defn call-verein-service-raw [startnummer]
+  (prn "calling verein-service for-startnummer" startnummer)
   (:verein (:body (client/get (str "http://localhost:8000/collection" "/" startnummer) {:accept :json :as :json}))))
-
+(def call-verein-service
+  (memoize call-verein-service-raw))
 (defn grabData [file]
   (str/split-lines (slurp file)))
 
@@ -28,16 +30,20 @@
   (csv-seq-path (str "" fname)))
 
 (defn map-flds [lsq]
-  ;;(filter #(not (empty? (:ziel-zeit %)))
-  (map #(zipmap [:platz,:startnummer,:name,:jg,:nat,:verein,:ak,:akp,:mw-platz,:rad-laufen-zeit ] %) lsq)) ;;)
-
-(defn agegroup-pred [yrs m] (contains? yrs (m :jg )))
-
+  (filter #(not (empty? (:rad-laufen-zeit %)))
+  (map #(zipmap [:platz,:startnummer,:name,:jg,:nat,:verein,:ak,:akp,:mw-platz,:rad-laufen-zeit ] %) lsq)))
 
 (defn in?
   "true if seq contains elm"
   [seq elm]
   (some #(= elm %) seq))
+
+(defn agegroup-pred
+  "filter for year of birth"
+  [yrs-seq result-map]
+  (let [year-of-birth (result-map :jg )]
+    (prn yrs-seq year-of-birth (in? yrs-seq year-of-birth))
+    (in? yrs-seq year-of-birth)))
 
 (defn second-line-last-col [seq]
   (last (second seq)))
@@ -51,7 +57,7 @@
 (def age-to-gender {"c" ["m" "w"]
                     "b" ["m" "w"]
                     "a" ["x"]
-                    "j" ["x"]})
+                    "sb" ["x"]})
 (defn result-files-gender
   ([m] (result-files-gender (m :age ) (m :gender )))
   ([age-group gender]
@@ -127,10 +133,10 @@
     (let [[h m s] (map - (map parse-int (.split a ":")) (map parse-int (.split b ":")))]
       (prn h m s)
       (let [carry-s-to-m (if (< s 0) true false)
-            correct-s (if carry-s-to-m (+ 60 s)s)
+            correct-s (if carry-s-to-m (+ 60 s) s)
             carried-m (if carry-s-to-m (dec m) m)
-            carry-m-to-h (if (< carried-m 0)  true false)
-            correct-m (if carry-m-to-h (+ 60 carried-m)carried-m)
+            carry-m-to-h (if (< carried-m 0) true false)
+            correct-m (if carry-m-to-h (+ 60 carried-m) carried-m)
             correct-h (if carry-m-to-h (dec h) h)
             ]
         (format "%d:%02d:%02d" correct-h correct-m correct-s)))))
@@ -150,20 +156,27 @@
                   "b" "b",
                   "a" "a",
                   "sb" "a"})
+
+(defn generate-htm-table [gender-key year age-key]
+  (let [mst (min-swim-time age-key)
+        time-modifier (partial add-fastest-swimtime-in-group mst)
+        infile-key (infile-keys age-key)
+        infile (format "in-file-%s-%s.csv" gender-key infile-key)
+        outfile (format "/tmp/%s-%s.html" gender-key age-key)
+        age-groups-year (age-groups year)
+        agegroup-pred-born (partial agegroup-pred (age-groups-year age-key))
+        ]
+    (prn ">>generating report for" infile "min swimtime " mst "age key" age-key)
+    (spit outfile
+      (to-result-table
+        (csv-seq infile)
+        agegroup-pred-born
+        time-modifier))))
+
 (defn generate-html-tables-for-age-key [year age-key]
-  (prn ">>generating report for" year age-key)
-  (doall (map (fn [gender-key]
-                (let [mst (min-swim-time age-key)
-                      time-modifier (partial add-fastest-swimtime-in-group mst)
-                      infile-key (infile-keys age-key)
-                      infile (format "in-file-%s-%s.csv" gender-key infile-key)
-                      outfile (format "/tmp/%s-%s.html" gender-key age-key)
-                      ]
-                  (spit outfile
-                    (to-result-table
-                      (csv-seq infile)
-                      time-modifier))))
-           ["w" "m"])))
+
+  (doall (map #( generate-htm-table % year age-key) ["w" "m"])))
+
 (defn generate-html-tables [year age-keys]
   (prn ">>age-keys" age-keys)
   (doall (map (fn [age-key] (generate-html-tables-for-age-key year age-key)) age-keys)))
