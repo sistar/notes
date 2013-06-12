@@ -7,14 +7,17 @@
   (:require [clj-http.client :as client]))
 
 (def age-groups {2013 {"c" ["2005" "2004"] "b" ["2003" "2002"] "a" ["2001" "2000"] "sb" ["1999" "1998"]}})
+
 (defn map-tag [tag xs]
   (map (fn [x] [tag x]) xs))
 
 (defn call-verein-service-raw [startnummer]
   (prn "calling verein-service for-startnummer" startnummer)
   (:verein (:body (client/get (str "http://localhost:8000/collection" "/" startnummer) {:accept :json :as :json}))))
+
 (def call-verein-service
   (memoize call-verein-service-raw))
+
 (defn grabData [file]
   (str/split-lines (slurp file)))
 
@@ -58,26 +61,26 @@
                     "b" ["m" "w"]
                     "a" ["x"]
                     "sb" ["x"]})
+
 (defn result-files-gender
   ([m] (result-files-gender (m :age ) (m :gender )))
   ([age-group gender]
 
     (rest (csv-seq-path (result-file age-group gender))
-      ))
-  )
+      )))
+
 (defn swim-times []
   (apply concat (map result-files-gender (for [age (keys age-to-gender) gender (age-to-gender age) :let [t {:age age :gender gender}]] t)))
   )
+
 (defn startnummer-to-swimtimes []
   (apply merge (filter #(not (empty? (first (vals %)))) (map #(hash-map (second %) (last %)) (swim-times))))
   )
-(defn rad-laufen-zeit [startnummer]
-  ;;persoenliche zeit minus schnellste schwimmzeit
-  )
+(def heading-strings ["Pl." "Name" "Verein" "JG" "Swim" "Rad/Run" "Gesamt"])
+(def heading-hiccup (map-tag :th heading-strings))
 (defn out [sq]
   (def counter (atom 0))
-
-  (html [:table [:tr (map-tag :th ["Platzierung" "Name" "Verein" "Jahrgang" "Schwimmen" "Rad/Laufen" "Gesamtzeit"])]
+  (html [:table [:tr heading-hiccup]
          (map
            (fn [m]
              [:tr [:td (swap! counter inc)]
@@ -113,8 +116,10 @@
       ))
   ([age-group]
     (first-str (best-swim-times age-group))))
+
 (defn parse-int [s]
   (Integer. (re-find #"\d+" s)))
+
 (defn add-timestr [a b]
   (if (or (empty? a) (empty? b))
     nil
@@ -141,8 +146,6 @@
             ]
         (format "%d:%02d:%02d" correct-h correct-m correct-s)))))
 
-
-;;ziel-zeit wird aus Ergebnisliste genommen
 (defn add-fastest-swimtime-in-group [fastest-time-to-add-timestr m]
   (let [gesamt-zeit (add-timestr fastest-time-to-add-timestr (m :rad-laufen-zeit ))
         schwimmzeit ((startnummer-to-swimtimes) (m :startnummer ))
@@ -174,7 +177,6 @@
         time-modifier))))
 
 (defn generate-html-tables-for-age-key [year age-key]
-
   (doall (map #( generate-htm-table % year age-key) ["w" "m"])))
 
 (defn generate-html-tables [year age-keys]

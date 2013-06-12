@@ -1,7 +1,10 @@
 (ns midje-demo.t-parse-tria-results
   (:use midje.sweet)
+  (:use hiccup.core)
   (:use midje-demo.parse-tria-results))
-(def html-lindner-kiara "<table><tr><th>Platzierung</th><th>Name</th><th>Verein</th><th>Jahrgang</th><th>Schwimmen</th><th>Rad/Laufen</th><th>Gesamtzeit</th></tr><tr><td>1</td><td>Lindner, Kira</td><td>VAF TriKids</td><td>2004</td><td>0:02:28</td><td>0:08:10</td><td>0:10:38</td></tr></table>")
+(def html-lindner-kiara (str "<table><tr>"
+                          (html heading-hiccup)
+                          "</tr><tr><td>1</td><td>Lindner, Kira</td><td>VAF TriKids</td><td>2004</td><td>0:02:28</td><td>0:08:10</td><td>0:10:38</td></tr></table>"))
 (facts "about out"
   (fact "it processes a sequence"
     (out (sequence [{:platz "1.",:startnummer "2" ,:name "Lindner, Kira",
