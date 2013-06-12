@@ -1,12 +1,13 @@
 (ns midje-demo.t-parse-tria-results
   (:use midje.sweet)
   (:use midje-demo.parse-tria-results))
-
+(def html-lindner-kiara "<table><tr><th>Platzierung</th><th>Name</th><th>Verein</th><th>Jahrgang</th><th>Schwimmen</th><th>Rad/Laufen</th><th>Gesamtzeit</th></tr><tr><td>1</td><td>Lindner, Kira</td><td>VAF TriKids</td><td>2004</td><td>0:02:28</td><td>0:08:10</td><td>0:10:38</td></tr></table>")
 (facts "about out"
   (fact "it processes a sequence"
     (out (sequence [{:platz "1.",:startnummer "2" ,:name "Lindner, Kira",
                      :jg "2004",:nat "DEU",:verein "VAF TriKids" ,:ak "" ,:akp "",
-                     :mw-platz "1." ,:ziel-zeit "0:08:10"}])) => "<table><tr><th>Platzierung</th><th>Name</th><th>Verein</th><th>Jahrgang</th><th>Gesamtzeit</th></tr><tr><td>1</td><td>Lindner, Kira</td><td>VAF TriKids</td><td>2004</td><td>0:08:10</td></tr></table>"
+                     :mw-platz "1." ,:rad-laufen-zeit-korrigiert "0:08:10",
+                     :gesamt-zeit "0:10:38"}])) => html-lindner-kiara
     ))
 
 (facts "about `add-timestr`"
@@ -31,7 +32,7 @@
 (facts "about to-result-table"
   (fact "it works in isolation"
     (to-result-table (list [] ["1.","2","Lindner, Kira","2004","DEU","VAF TriKids","","","1.","0:08:10"]) (partial add-fastest-swimtime-in-group (min-swim-time "c")))
-    => "<table><tr><th>Platzierung</th><th>Name</th><th>Verein</th><th>Jahrgang</th><th>Gesamtzeit</th></tr><tr><td>1</td><td>Lindner, Kira</td><td>VAF TriKids</td><td>2004</td><td>0:08:10</td></tr></table>"
+    => html-lindner-kiara
     )
 
   (fact "it generates a table"
@@ -65,12 +66,12 @@
   (fact "it maps rows from vector to map with known keys"
     (first (map-flds (vector (second (csv-seq "in-file-w-c.csv"))))) => {:platz "1.",:startnummer "2" ,:name "Lindner, Kira",
                                                                          :jg "2004",:nat "DEU",:verein "VAF TriKids" ,:ak "" ,:akp "",
-                                                                         :mw-platz "1." ,:ziel-zeit "0:08:10"}
+                                                                         :mw-platz "1." ,:rad-laufen-zeit "0:08:10"}
     )
   (fact "it processes a sequence"
     (first (map-flds (vector (second (csv-seq "in-file-w-c.csv"))))) => {:platz "1.",:startnummer "2" ,:name "Lindner, Kira",
                                                                          :jg "2004",:nat "DEU",:verein "VAF TriKids" ,:ak "" ,:akp "",
-                                                                         :mw-platz "1." ,:ziel-zeit "0:08:10"}))
+                                                                         :mw-platz "1." ,:rad-laufen-zeit "0:08:10"}))
 (facts "about min-swim-time"
   (fact "result-file creates java.io.File according to naming conventions"
     (str (result-file "c" "m")) => "Ergebnisliste-Kiezkindertriathlon 2013 m c s.csv"

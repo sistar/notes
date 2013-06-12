@@ -162,8 +162,6 @@
                   (spit outfile
                     (to-result-table
                       (csv-seq infile)
-                      year
-                      age-key
                       time-modifier))))
            ["w" "m"])))
 (defn generate-html-tables [year age-keys]
