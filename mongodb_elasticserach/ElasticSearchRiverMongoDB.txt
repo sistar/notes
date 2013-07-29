@@ -1,0 +1,84 @@
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv 7F0CEB10
+  965  echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/10gen.list
+  966  sudo apt-get update
+  967  sudo apt-get install mongodb-10gen
+
+
+#mongodb replica set is mandatory! http://docs.mongodb.org/manual/tutorial/deploy-replica-set/
+mkdir -p /srv/mongodb/rs0-0 /srv/mongodb/rs0-1 /srv/mongodb/rs0-2
+sudo -u mongodb mongod --port 27017 --dbpath /srv/mongodb/rs0-0 --replSet rs0 --smallfiles --oplogSize 128
+sudo -u mongodb mongod --port 27018 --dbpath /srv/mongodb/rs0-1 --replSet rs0 --smallfiles --oplogSize 128
+sudo -u mongodb mongod --port 27019 --dbpath /srv/mongodb/rs0-2 --replSet rs0 --smallfiles --oplogSize 128
+
+mongo --port 27017
+rsconf = {
+           _id: "rs0",
+           members: [
+                      {
+                       _id: 0,
+                       host: "localhost:27017"
+                      }
+                    ]
+         }
+rs.initiate( rsconf )
+rs.conf()
+rs.add("<localhost>:27018")
+rs.add("<localhost>:27019")
+rs.status()
+
+Elastic Search
+
+dpkg --get-selections | grep elastic 
+elasticsearch
+apt-cache show elasticsearch 
+# shows conf files
+dpkg -L elasticsearch
+cd /usr/share/elasticsearch
+
+# set JAVA_HOME in  /etc/default/elasticsearch
+JAVA_HOME=/usr/lib/jvm/jdk1.7.0_21
+service elasticsearch start
+
+# check less /var/log/elasticsearch/elasticsearch.log
+
+Elastic Search River Plugin 
+
+sudo ./plugin -install elasticsearch/elasticsearch-mapper-attachments/1.7.0
+sudo ./plugin -install -url https://oss.sonatype.org/content/repositories/releases/com/github/richardwilly98/elasticsearch/elasticsearch-river-mongodb/1.6.11/elasticsearch-river-mongodb-1.6.11.zip river-mongodb
+
+
+curl -XPUT 'http://localhost:9200/_river/mongodb/_meta' -d '{ 
+    "type": "mongodb", 
+    "mongodb": { 
+        "db": "testmongo", 
+        "collection": "person"
+    }, 
+    "index": {
+        "name": "mongoindex", 
+        "type": "person" 
+    }
+}' 
+
+# just to check
+
+curl -X GET localhost:9200/_river/mongodb/_meta
+{"_index":"_river","_type":"mongodb","_id":"_meta","_version":1,"exists":true, "_source" : { 
+    "type": "mongodb", 
+    "mongodb": { 
+        "db": "testmongo", 
+        "collection": "person"
+    }, 
+    "index": {
+        "name": "mongoindex", 
+        "type": "person" 
+    }
+}}
+
+#final check
+
+mongo 
+use testmongo
+
+var p = {firstName: "Alexander", lastName: "Holbreich"}
+db.person.save(p)
+curl -X GET localhost:9200/mongoindex/_search?q=firstName:John
